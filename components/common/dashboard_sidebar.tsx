@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarProvider } from "../ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 
 interface sidebarMenuProps {
   icon: string
@@ -45,7 +45,7 @@ const sidebarMenuItems: sidebarMenuProps[] = [
   }
 ]
 
-export default function DashboardSidebar() {
+export function DashboardSidebar() {
   return (
     <SidebarProvider>
       <Sidebar className="px-4">
