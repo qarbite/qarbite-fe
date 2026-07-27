@@ -1,4 +1,28 @@
 @import "tailwindcss";
+@import "tailwindcss/preflight";
+
+@layer base {
+  body {
+    @apply bg-[#F4F7F9] text-slate-900 antialiased;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
+}
 
 :root {
   --background: #ffffff;
