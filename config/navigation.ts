@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 export const sidebarMenus = [
-  { title: "Dashboard", path: "/", icon: LayoutDashboard },
+  { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { title: "Machines", path: "/machines", icon: Settings },
   { title: "Inspections", path: "/inspections", icon: ClipboardCheck },
   { title: "Maintenance", path: "/maintenance", icon: Wrench },
