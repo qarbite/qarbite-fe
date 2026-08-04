@@ -2,7 +2,6 @@ import { AlertCircle, Activity, Thermometer, Zap, Settings as SettingsIcon, Wren
 
 // 1. SIMULASI FETCH DATA DARI SUPABASE
 async function getDashboardData() {
-  // Dalam realita, di sini Anda memanggil: await supabase.from('...').select('*')
   return {
     kpis: {
       activeMachines: { value: 124, trend: "+3 since last shift", status: "good" },
@@ -25,7 +24,8 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       
       {/* ROW 1: KPI CARDS */}
-      <div className="grid grid-cols-4 gap-6">
+      {/* Berubah dari grid-cols-4 statis menjadi dinamis */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
           title="ACTIVE MACHINES" value={data.kpis.activeMachines.value} 
           subtitle={data.kpis.activeMachines.trend} icon={<Activity className="text-blue-500" />} 
@@ -49,10 +49,12 @@ export default async function DashboardPage() {
       </div>
 
       {/* ROW 2: CHARTS */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Main Chart (Placeholder for Recharts/Chart.js) */}
-        <div className="col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <div className="flex justify-between items-start mb-6">
+      {/* Kolom utama menjadi 1 di mobile, 3 di desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Chart */}
+        {/* col-span diatur ulang agar mengambil ruang penuh di mobile, dan 2 kolom di desktop */}
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4">
             <div>
               <h3 className="font-bold text-slate-800">Performance Matrix</h3>
               <p className="text-xs text-slate-500">Real-time correlation: Temperature (°C) vs Vibration (Hz)</p>
@@ -98,9 +100,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* ROW 3: LISTS & MAP */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Live Anomaly Feed */}
-        <div className="col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500"></span> LIVE ANOMALY FEED
@@ -109,9 +111,9 @@ export default async function DashboardPage() {
           </div>
           <div className="space-y-4">
             {data.anomalies.map((item) => (
-              <div key={item.id} className="flex justify-between items-center p-4 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-lg border border-slate-100 bg-slate-50/50 gap-4">
                 <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-500' : item.level === 'WARNING' ? 'bg-orange-100 text-orange-500' : 'bg-slate-200 text-slate-500'}`}>
+                  <div className={`p-2 rounded-lg shrink-0 ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-500' : item.level === 'WARNING' ? 'bg-orange-100 text-orange-500' : 'bg-slate-200 text-slate-500'}`}>
                     {item.level === 'CRITICAL' ? <AlertCircle size={20} /> : item.level === 'WARNING' ? <Activity size={20} /> : <Thermometer size={20} />}
                   </div>
                   <div>
@@ -119,8 +121,8 @@ export default async function DashboardPage() {
                     <p className="text-xs text-slate-500">{item.unit}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-800 mb-1">{item.time}</p>
+                <div className="sm:text-right flex sm:block items-center justify-between">
+                  <p className="text-xs font-bold text-slate-800 sm:mb-1">{item.time}</p>
                   <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-600' : item.level === 'WARNING' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'}`}>
                     {item.level}
                   </span>
