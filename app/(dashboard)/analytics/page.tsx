@@ -8,7 +8,6 @@ import {
 // 1. SIMULASI FETCH DATA DARI SUPABASE
 // ============================================================================
 async function getAnalyticsData() {
-  // Simulasi delay jaringan
   await new Promise(resolve => setTimeout(resolve, 400));
 
   return {
@@ -68,32 +67,34 @@ export default async function AnalyticsPage() {
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto pb-12 relative">
       
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-end mb-2">
+      {/* Diubah menjadi flex-col di mobile agar judul & tombol tidak berdesakan */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-2 gap-4 sm:gap-0">
         <div>
           <h2 className="text-[11px] font-bold text-amber-700 tracking-widest uppercase mb-2">Predictive Maintenance Hub</h2>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">AI Analytics & Insights</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">AI Analytics & Insights</h1>
         </div>
-        <div className="flex gap-3">
-          <button className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg transition-colors text-sm">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button className="w-full sm:w-auto px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg transition-colors text-sm">
             Export Data
           </button>
-          <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md text-sm">
+          <button className="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md text-sm">
             Run Full Diagnostic
           </button>
         </div>
       </div>
 
       {/* TOP ROW: RUL CHART & INSIGHTS */}
+      {/* grid-cols-12 sudah responsif (span-12 di mobile, span-8/4 di desktop) */}
       <div className="grid grid-cols-12 gap-6">
         
         {/* RUL Scatter Chart (Span 8) */}
-        <div className="col-span-12 lg:col-span-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col">
-          <div className="flex justify-between items-start mb-6">
+        <div className="col-span-12 lg:col-span-8 bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col overflow-hidden">
+          <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-3 sm:gap-0">
             <div>
               <h3 className="font-bold text-slate-900 text-lg">Remaining Useful Life (RUL)</h3>
               <p className="text-xs text-slate-500">Estimated machine longevity across fleet</p>
             </div>
-            <div className="flex bg-slate-50 border border-slate-100 rounded-lg p-1">
+            <div className="flex bg-slate-50 border border-slate-100 rounded-lg p-1 shrink-0">
               <span className="px-3 py-1 text-[10px] font-bold text-blue-600 bg-white shadow-sm rounded-md">Critical</span>
               <span className="px-3 py-1 text-[10px] font-bold text-slate-500">Operational</span>
             </div>
@@ -108,7 +109,7 @@ export default async function AnalyticsPage() {
                 style={{ left: `${point.x}%`, top: `${point.y}%` }}
               >
                 <span className="text-[10px] font-bold text-slate-600">{point.id}</span>
-                <span className={`text-sm font-black ${
+                <span className={`text-xs md:text-sm font-black ${
                   point.status === 'Critical' ? 'text-red-500' : 
                   point.status === 'Warning' ? 'text-amber-600' : 'text-blue-600'
                 }`}>
@@ -120,7 +121,7 @@ export default async function AnalyticsPage() {
         </div>
 
         {/* AI Strategic Insights (Span 4) */}
-        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col">
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col">
           <div className="mb-6">
             <h3 className="font-bold text-slate-900 text-lg">AI Strategic Insights</h3>
             <p className="text-xs text-slate-500">Neural engine derived recommendations</p>
@@ -139,8 +140,8 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* MIDDLE ROW: ISSUE FREQUENCY MATRIX */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex justify-between items-start mb-8">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-3 sm:gap-0">
           <div>
             <h3 className="font-bold text-slate-900 text-lg">Issue Frequency Matrix</h3>
             <p className="text-xs text-slate-500">Temporal density of machine alerts across production shifts</p>
@@ -152,30 +153,34 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          {/* Header Row (Days) */}
-          <div className="flex ml-24 gap-2">
-            {data.matrix.days.map((day) => (
-              <div key={day} className="flex-1 text-center text-[10px] font-bold text-slate-400 tracking-widest">{day}</div>
+        {/* Ditambahkan overflow-x-auto agar tabel matrix bisa digeser ke kanan-kiri di mobile */}
+        <div className="overflow-x-auto pb-4">
+          <div className="flex flex-col gap-2 min-w-[500px]">
+            {/* Header Row (Days) */}
+            <div className="flex ml-24 gap-2">
+              {data.matrix.days.map((day) => (
+                <div key={day} className="flex-1 text-center text-[10px] font-bold text-slate-400 tracking-widest">{day}</div>
+              ))}
+            </div>
+            
+            {/* Grid Rows (Shifts) */}
+            {data.matrix.shifts.map((shift, idx) => (
+              <div key={idx} className="flex items-center gap-4">
+                <div className="w-24 text-[10px] font-bold text-slate-600 shrink-0">{shift.name}</div>
+                <div className="flex flex-1 gap-2">
+                  {shift.data.map((intensity, i) => (
+                    <MatrixCell key={i} intensity={intensity} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-          
-          {/* Grid Rows (Shifts) */}
-          {data.matrix.shifts.map((shift, idx) => (
-            <div key={idx} className="flex items-center gap-4">
-              <div className="w-24 text-[10px] font-bold text-slate-600">{shift.name}</div>
-              <div className="flex flex-1 gap-2">
-                {shift.data.map((intensity, i) => (
-                  <MatrixCell key={i} intensity={intensity} />
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
       {/* BOTTOM ROW: KPIS */}
-      <div className="grid grid-cols-3 gap-6">
+      {/* Berubah menjadi grid-cols-1 di mobile, lalu md:grid-cols-3 di tablet/desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
         <KpiCard 
           title="ASSET RELIABILITY"
           value={data.kpis.reliability.value}
@@ -203,20 +208,22 @@ export default async function AnalyticsPage() {
         />
       </div>
 
-      {/* STATUS FOOTER & FAB */}
-      <div className="flex justify-between items-center mt-4 text-[10px] font-bold tracking-widest text-slate-400">
-        <div className="flex gap-6">
+      {/* STATUS FOOTER */}
+      {/* Disesuaikan menjadi stack vertical di layar kecil */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-4 text-[10px] font-bold tracking-widest text-slate-400 gap-4 md:gap-0">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-6">
           <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div> AI ENGINE: ACTIVE</span>
           <span>DATA REFRESH: 2m AGO</span>
           <span>FLEET CONNECTIVITY: 100%</span>
         </div>
         <div>
-          © 2024 QARBITE INDUSTRIAL PRECISION
+          © 2026 QARBITE INDUSTRIAL PRECISION
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <button className="absolute bottom-0 right-0 w-12 h-12 bg-slate-900 text-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-800 transition-colors">
+      {/* Floating Action Button (FAB) */}
+      {/* Menggunakan fixed di mobile agar selalu melayang, absolute di desktop mengikuti container */}
+      <button className="fixed bottom-6 right-6 md:absolute md:bottom-0 md:right-0 w-12 h-12 bg-slate-900 text-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-800 transition-colors z-30">
         <Plus size={24} />
       </button>
 
@@ -228,7 +235,6 @@ export default async function AnalyticsPage() {
 // 3. REUSABLE MICRO-COMPONENTS
 // ============================================================================
 
-// Komponen Card Insight AI (Kolom Kanan)
 function InsightCard({ data }: { data: any }) {
   let borderColor = "border-l-blue-500";
   let typeColor = "text-blue-600";
@@ -250,7 +256,6 @@ function InsightCard({ data }: { data: any }) {
   );
 }
 
-// Komponen Cell untuk Heatmap (Matrix)
 function MatrixCell({ intensity }: { intensity: number }) {
   let bgColor = "bg-slate-100"; // 0
   
@@ -259,19 +264,18 @@ function MatrixCell({ intensity }: { intensity: number }) {
   if (intensity === 3) bgColor = "bg-[#0A58CA]"; // High (Dark Blue)
 
   return (
-    <div className={`flex-1 h-10 rounded-md ${bgColor} transition-colors hover:opacity-80`}></div>
+    <div className={`flex-1 h-8 sm:h-10 rounded-md ${bgColor} transition-colors hover:opacity-80`}></div>
   );
 }
 
-// Komponen KPI Card (Baris Bawah)
 function KpiCard({ title, value, trend, desc, icon, trendColor, isAlert = false }: any) {
   return (
-    <div className={`bg-slate-100/50 rounded-xl p-5 border border-slate-200 relative overflow-hidden ${isAlert ? 'bg-slate-100' : ''}`}>
+    <div className={`bg-slate-100/50 rounded-xl p-4 md:p-5 border border-slate-200 relative overflow-hidden ${isAlert ? 'bg-slate-100' : ''}`}>
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">{title}</h3>
         {icon}
       </div>
-      <h2 className="text-3xl font-black text-slate-900 mb-1">{value}</h2>
+      <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-1">{value}</h2>
       <p className="text-[10px] font-medium text-slate-500">
         <span className={`font-bold ${trendColor} mr-1`}>{trend}</span> 
         {desc}
