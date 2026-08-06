@@ -2,14 +2,14 @@ import React from 'react';
 import { 
   Download, Plus, CheckCircle, Wrench, AlertTriangle, Clock, 
   ArrowRight, MoreHorizontal, Settings, Bot, XCircle, Monitor,
-  Filter
+  Filter,
+  Activity
 } from 'lucide-react';
 
 // ============================================================================
 // 1. SIMULASI FETCH DATA DARI SUPABASE
 // ============================================================================
 async function getMachinesData() {
-  // Simulasi delay jaringan
   await new Promise(resolve => setTimeout(resolve, 500));
 
   return {
@@ -84,25 +84,27 @@ export default async function MachinesPage() {
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto pb-8">
       
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-end">
+      {/* Diubah menjadi flex-col di mobile agar tombol turun ke bawah */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-0">
         <div>
           <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-1">Asset Management</h2>
-          <h1 className="text-3xl font-black text-slate-900">Machine Inventory</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900">Machine Inventory</h1>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors text-sm">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button className="flex justify-center items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors text-sm w-full sm:w-auto">
             <Download size={16} /> Export Data
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors text-sm shadow-md">
+          <button className="flex justify-center items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors text-sm shadow-md w-full sm:w-auto">
             <Plus size={16} /> Register Unit
           </button>
         </div>
       </div>
 
       {/* KPI CARDS (TOP ROW) */}
-      <div className="grid grid-cols-3 gap-6">
+      {/* 1 kolom di mobile, 3 kolom di layar besar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Health Index Card */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 relative overflow-hidden flex flex-col justify-between">
+       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 relative overflow-hidden flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Fleet Health Index</h3>
             <p className="text-5xl font-black text-blue-700">{data.stats.healthIndex}%</p>
@@ -113,8 +115,9 @@ export default async function MachinesPage() {
             </span> 
             vs last maintenance cycle
           </div>
-          {/* Dekorasi kotak biru pudar di kanan atas */}
-          <div className="absolute top-6 right-6 w-12 h-12 bg-blue-50 rounded-lg"></div>
+          <div className="absolute top-6 right-6 w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+            <Activity size={24} className="text-blue-600" />
+          </div>
         </div>
 
         {/* Operational Card */}
@@ -123,7 +126,7 @@ export default async function MachinesPage() {
             <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Operational</h3>
             <CheckCircle className="text-blue-600" size={24} />
           </div>
-          <div>
+          <div className="mt-4 md:mt-0">
             <p className="text-4xl font-black text-slate-900">{data.stats.operational}</p>
             <p className="text-xs text-slate-500 font-medium mt-1">Units actively running</p>
           </div>
@@ -135,7 +138,7 @@ export default async function MachinesPage() {
             <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Maintenance</h3>
             <Wrench className="text-amber-700" size={24} />
           </div>
-          <div>
+          <div className="mt-4 md:mt-0">
             <p className="text-4xl font-black text-slate-900">{data.stats.maintenance}</p>
             <p className="text-xs text-slate-500 font-medium mt-1">Scheduled for this week</p>
           </div>
@@ -143,7 +146,8 @@ export default async function MachinesPage() {
       </div>
 
       {/* SECONDARY STATS (MIDDLE ROW) */}
-      <div className="grid grid-cols-4 gap-6">
+      {/* 1 kolom mobile, 2 tablet, 4 desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-red-50 rounded-xl p-4 border border-red-100 flex items-center gap-4">
           <AlertTriangle className="text-red-500" size={32} />
           <div>
@@ -158,12 +162,13 @@ export default async function MachinesPage() {
             <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Avg. Response Time</p>
           </div>
         </div>
-        <div className="col-span-2 bg-white rounded-xl p-4 border border-slate-200 flex items-center justify-between shadow-sm">
+        {/* col-span-1 di mobile, col-span-2 di sm dan lg */}
+        <div className="col-span-1 sm:col-span-2 bg-white rounded-xl p-4 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm gap-4 sm:gap-0">
           <div>
             <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">AI Failure Prediction</p>
             <p className="text-sm text-slate-500 mt-1">Neural models suggest 3 potential bearing failures in Zone B.</p>
           </div>
-          <button className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline">
+          <button className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline self-start sm:self-auto shrink-0">
             Review Alert <ArrowRight size={16} />
           </button>
         </div>
@@ -172,23 +177,23 @@ export default async function MachinesPage() {
       {/* TABLE SECTION */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Table Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div className="flex items-center gap-4">
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-50/50 gap-4 md:gap-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
             <h3 className="font-bold text-slate-800">Machinery Fleet</h3>
-            <div className="flex bg-slate-200 p-1 rounded-lg">
-              <button className="px-4 py-1 text-xs font-bold bg-white shadow-sm rounded-md text-slate-800">All Units</button>
-              <button className="px-4 py-1 text-xs font-bold text-slate-500 hover:text-slate-700">Robotics</button>
-              <button className="px-4 py-1 text-xs font-bold text-slate-500 hover:text-slate-700">CNC Systems</button>
+            <div className="flex bg-slate-200 p-1 rounded-lg w-full sm:w-auto overflow-x-auto">
+              <button className="px-4 py-1 text-xs font-bold bg-white shadow-sm rounded-md text-slate-800 whitespace-nowrap">All Units</button>
+              <button className="px-4 py-1 text-xs font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Robotics</button>
+              <button className="px-4 py-1 text-xs font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">CNC Systems</button>
             </div>
           </div>
-          <button className="text-slate-400 hover:text-slate-600">
+          <button className="text-slate-400 hover:text-slate-600 self-end md:self-auto">
             <Filter size={20} />
           </button>
         </div>
 
         {/* The Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-white border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 <th className="p-4 pl-6">ID / Machine Name</th>
@@ -250,7 +255,7 @@ export default async function MachinesPage() {
         </div>
         
         {/* Pagination Dummy */}
-        <div className="p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50/50 gap-4 sm:gap-0">
           <p className="text-xs text-slate-500 font-medium">Showing <strong className="text-slate-800">12</strong> of <strong>164</strong> assets</p>
           <div className="flex gap-1">
             <button className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-400 hover:bg-slate-50 text-sm font-bold">{'<'}</button>
@@ -262,30 +267,31 @@ export default async function MachinesPage() {
       </div>
 
       {/* BOTTOM WIDGETS */}
-      <div className="grid grid-cols-3 gap-6">
+      {/* 1 kolom di mobile, 3 di lg */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Telemetry View */}
-        <div className="col-span-2 bg-slate-900 rounded-xl overflow-hidden relative shadow-sm h-64 border border-slate-200">
+        <div className="col-span-1 lg:col-span-2 bg-slate-900 rounded-xl overflow-hidden relative shadow-sm h-auto sm:h-64 border border-slate-200 flex flex-col justify-end">
            {/* Dummy Image Background */}
            <img 
             src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80" 
             alt="Factory Floor" 
             className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity"
            />
-           <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent"></div>
+           <div className="absolute inset-0 bg-gradient-to-t from-black/80 sm:from-white sm:via-white/80 to-transparent"></div>
            
-           <div className="absolute bottom-0 left-0 right-0 p-6 flex justify-between items-end">
+           <div className="relative p-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-0 z-10">
               <div>
-                <p className="text-[10px] font-bold text-blue-600 tracking-widest uppercase mb-1">Real-Time Telemetry</p>
-                <h3 className="text-xl font-black text-slate-900">Factory Floor Live Monitor</h3>
+                <p className="text-[10px] font-bold text-blue-400 sm:text-blue-600 tracking-widest uppercase mb-1">Real-Time Telemetry</p>
+                <h3 className="text-xl font-black text-white sm:text-slate-900">Factory Floor Live Monitor</h3>
               </div>
-              <div className="flex gap-6 text-right">
+              <div className="flex gap-6 text-left sm:text-right">
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">Active</p>
-                  <p className="text-sm font-bold text-amber-700">02 Points</p>
+                  <p className="text-xs text-slate-300 sm:text-slate-500 font-medium">Active</p>
+                  <p className="text-sm font-bold text-amber-500 sm:text-amber-700">02 Points</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">Connectivity</p>
-                  <p className="text-sm font-bold text-blue-600">Stable (99%)</p>
+                  <p className="text-xs text-slate-300 sm:text-slate-500 font-medium">Connectivity</p>
+                  <p className="text-sm font-bold text-blue-400 sm:text-blue-600">Stable (99%)</p>
                 </div>
               </div>
            </div>
@@ -293,7 +299,6 @@ export default async function MachinesPage() {
 
         {/* AI Predictive Card */}
         <div className="col-span-1 bg-blue-700 rounded-xl p-6 shadow-sm flex flex-col justify-between text-white relative overflow-hidden">
-          {/* Subtle dotted pattern background effect */}
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent bg-[length:10px_10px]"></div>
           
           <div className="relative z-10">
@@ -316,7 +321,6 @@ export default async function MachinesPage() {
 // 3. REUSABLE MICRO-COMPONENTS (Bisa dipindah ke folder /components/ui nantinya)
 // ============================================================================
 
-// Komponen untuk Status Badge di dalam tabel
 function StatusBadge({ status }: { status: string }) {
   let styles = "";
   let dotColor = "";
@@ -340,9 +344,8 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// Komponen Lingkaran Persentase Risiko (AI Failure Risk)
 function RiskCircle({ risk }: { risk: number }) {
-  let color = "text-slate-200"; // Lingkaran dasar
+  let color = "text-slate-200"; 
   let textColor = "text-slate-600";
 
   if (risk > 50) {
@@ -354,13 +357,12 @@ function RiskCircle({ risk }: { risk: number }) {
   }
 
   return (
-    <div className={`relative flex items-center justify-center w-8 h-8 rounded-full border-2 ${risk > 50 ? 'border-red-200' : risk > 20 ? 'border-amber-200' : 'border-slate-200'} bg-white`}>
+    <div className={`relative flex items-center justify-center shrink-0 w-8 h-8 rounded-full border-2 ${risk > 50 ? 'border-red-200' : risk > 20 ? 'border-amber-200' : 'border-slate-200'} bg-white`}>
       <span className={`text-[10px] font-bold ${textColor}`}>{risk}%</span>
     </div>
   );
 }
 
-// Simple Zap Icon component if not imported
 function ZapIcon({ size = 24 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
