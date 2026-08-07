@@ -2,8 +2,7 @@ import { Search, Bell, Settings } from "lucide-react";
 
 export default function Header() {
   return (
-    <header className="h-16 md:h-20 px-4 pl-14 md:px-8 flex items-center justify-between bg-transparent gap-4">
-      {/* KIRI: Judul & Pencarian */}
+    <header className="h-16 md:h-20 px-4 pl-20 md:px-8 flex items-center justify-between bg-transparent gap-4">      {/* KIRI: Judul & Pencarian */}
       <div className="flex items-center gap-4 md:gap-8 flex-1 md:flex-none">
         {/* Judul disembunyikan di layar kecil (tampil mulai ukuran tablet/md) */}
         <h2 className="hidden md:block text-xl md:text-2xl font-bold text-slate-900">

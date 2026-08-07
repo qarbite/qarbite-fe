@@ -5,7 +5,6 @@ import { Plus, Info, Lock } from 'lucide-react';
 // 1. SIMULASI FETCH DATA DARI SUPABASE
 // ============================================================================
 async function getMaintenanceData() {
-  // Simulasi delay fetch data
   await new Promise(resolve => setTimeout(resolve, 300));
 
   return {
@@ -32,7 +31,6 @@ async function getMaintenanceData() {
     },
     // Dummy calendar grid untuk tampilan bulan ini (5 minggu)
     calendarDays: [
-      // Minggu 1
       { date: 28, isCurrentMonth: false, events: [] },
       { date: 29, isCurrentMonth: false, events: [] },
       { date: 30, isCurrentMonth: false, events: [] },
@@ -40,7 +38,6 @@ async function getMaintenanceData() {
       { date: 1, isCurrentMonth: true, events: [{ id: 1, title: "Preventive C...", type: "preventive", style: "outline" }] },
       { date: 2, isCurrentMonth: true, events: [] },
       { date: 3, isCurrentMonth: true, events: [] },
-      // Minggu 2
       { date: 4, isCurrentMonth: true, events: [] },
       { date: 5, isCurrentMonth: true, events: [{ id: 2, title: "Annual Service", type: "preventive", style: "solid" }, { id: 3, title: "Filter Swap", type: "general", style: "soft-blue" }] },
       { date: 6, isCurrentMonth: true, events: [] },
@@ -48,15 +45,13 @@ async function getMaintenanceData() {
       { date: 8, isCurrentMonth: true, events: [{ id: 4, title: "Corrective R...", type: "corrective", style: "solid" }] },
       { date: 9, isCurrentMonth: true, events: [] },
       { date: 10, isCurrentMonth: true, events: [] },
-      // Minggu 3
       { date: 11, isCurrentMonth: true, events: [] },
-      { date: 12, isCurrentMonth: true, events: [], locked: true }, // Dummy locked icon
+      { date: 12, isCurrentMonth: true, events: [], locked: true }, 
       { date: 13, isCurrentMonth: true, events: [{ id: 5, title: "Sensor Test", type: "preventive", style: "outline" }] },
       { date: 14, isCurrentMonth: true, events: [] },
       { date: 15, isCurrentMonth: true, events: [] },
       { date: 16, isCurrentMonth: true, events: [] },
       { date: 17, isCurrentMonth: true, events: [] },
-      // Minggu 4
       { date: 18, isCurrentMonth: true, events: [] },
       { date: 19, isCurrentMonth: true, events: [{ id: 6, title: "Main Engine ...", type: "preventive", style: "solid" }] },
       { date: 20, isCurrentMonth: true, events: [{ id: 7, title: "Overhaul Day 2", type: "preventive", style: "solid" }] },
@@ -64,7 +59,6 @@ async function getMaintenanceData() {
       { date: 22, isCurrentMonth: true, events: [] },
       { date: 23, isCurrentMonth: true, events: [{ id: 8, title: "Oil Lubrication", type: "general", style: "outline-brown" }] },
       { date: 24, isCurrentMonth: true, events: [] },
-      // Minggu 5
       { date: 25, isCurrentMonth: true, events: [] },
       { date: 26, isCurrentMonth: true, events: [] },
       { date: 27, isCurrentMonth: true, events: [] },
@@ -87,28 +81,32 @@ export default async function MaintenancePage() {
     <div className="flex flex-col gap-6 max-w-[1500px] mx-auto pb-8">
       
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-end mb-4">
+      {/* Diubah menjadi flex-col di mobile agar judul & tombol tidak berdesakan */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4 md:gap-0">
         <div>
           <h2 className="text-[10px] font-bold text-amber-700 tracking-widest uppercase mb-1">System Operations</h2>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Maintenance</h1>
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Maintenance</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
           {/* View Toggle */}
-          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-            <button className="px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-bold text-slate-800">Month</button>
-            <button className="px-4 py-1.5 text-slate-500 hover:text-slate-800 text-sm font-bold transition-colors">Week</button>
-            <button className="px-4 py-1.5 text-slate-500 hover:text-slate-800 text-sm font-bold transition-colors">Day</button>
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 justify-between sm:justify-start">
+            <button className="px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-bold text-slate-800 flex-1 sm:flex-none">Month</button>
+            <button className="px-4 py-1.5 text-slate-500 hover:text-slate-800 text-sm font-bold transition-colors flex-1 sm:flex-none">Week</button>
+            <button className="px-4 py-1.5 text-slate-500 hover:text-slate-800 text-sm font-bold transition-colors flex-1 sm:flex-none">Day</button>
           </div>
           {/* Schedule Button */}
-          <button className="flex items-center gap-2 px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg transition-colors shadow-md text-sm">
+          <button className="flex justify-center items-center gap-2 px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg transition-colors shadow-md text-sm w-full sm:w-auto">
             <Plus size={16} strokeWidth={3} /> Schedule Task
           </button>
         </div>
       </div>
 
+      {/* grid-cols-12 sudah responsif secara default (stack di mobile, span di desktop) */}
       <div className="grid grid-cols-12 gap-8">
+        
         {/* LEFT COLUMN: FILTERS & ALERTS (Span 3) */}
-        <div className="col-span-12 lg:col-span-3 flex flex-col gap-8">
+        {/* Akan otomatis mengambil 12 kolom (penuh) di mobile, dan 3 kolom di layar besar (lg) */}
+        <div className="col-span-12 lg:col-span-3 flex flex-col gap-8 order-2 lg:order-1">
           
           {/* Filters */}
           <div>
@@ -152,58 +150,65 @@ export default async function MaintenancePage() {
         </div>
 
         {/* RIGHT COLUMN: CALENDAR (Span 9) */}
-        <div className="col-span-12 lg:col-span-9">
+        {/* Akan otomatis mengambil 12 kolom (penuh) di mobile, dan 9 kolom di layar besar (lg) */}
+        <div className="col-span-12 lg:col-span-9 order-1 lg:order-2">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
             
-            {/* Calendar Header */}
-            <div className="grid grid-cols-7 border-b border-slate-100 bg-white">
-              {weekDays.map((day) => (
-                <div key={day} className="py-4 text-center text-[11px] font-bold text-slate-500 tracking-wider">
-                  {day}
+            {/* WRAPPER OVERFLOW: Mengizinkan scroll horizontal pada kalender di layar sempit */}
+            <div className="overflow-x-auto">
+              <div className="min-w-[800px]"> {/* Lebar minimal agar grid kalender tidak hancur */}
+                
+                {/* Calendar Header */}
+                <div className="grid grid-cols-7 border-b border-slate-100 bg-white">
+                  {weekDays.map((day) => (
+                    <div key={day} className="py-4 text-center text-[11px] font-bold text-slate-500 tracking-wider">
+                      {day}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-[minmax(120px,1fr)] bg-slate-100 gap-px border-b border-slate-100">
-              {data.calendarDays.map((day, idx) => {
-                // Memberi warna latar belakang khusus jika hari ini adalah kolom TUE atau bagian dari blok tertentu (seperti mockup)
-                // Di mockup, kolom MON/TUE ada yang di-highlight biru pucat. Kita gunakan isCurrentMonth sbg dasar, plus custom kelas.
-                const isHighlightedColumn = (idx % 7 === 1 || idx % 7 === 2) && day.isCurrentMonth && (day.date >= 5 && day.date <= 20);
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 auto-rows-[minmax(120px,1fr)] bg-slate-100 gap-px border-b border-slate-100">
+                  {data.calendarDays.map((day, idx) => {
+                    const isHighlightedColumn = (idx % 7 === 1 || idx % 7 === 2) && day.isCurrentMonth && (day.date >= 5 && day.date <= 20);
 
-                return (
-                  <div 
-                    key={idx} 
-                    className={`p-2 flex flex-col gap-1 transition-colors ${
-                      day.isCurrentMonth 
-                        ? isHighlightedColumn ? 'bg-[#F0F4F8]' : 'bg-white' 
-                        : 'bg-white text-slate-300'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className={`text-xs font-bold ${
-                        !day.isCurrentMonth ? 'text-slate-300' : 
-                        (day.date === 5 || day.date === 8 || day.date === 1) ? 'text-blue-600' : 'text-slate-600'
-                      }`}>
-                        {day.date}
-                      </span>
-                      {day.locked && <Lock size={12} className="text-slate-300" />}
-                    </div>
-                    
-                    {/* Events */}
-                    <div className="flex flex-col gap-1 mt-1">
-                      {day.events.map((event) => (
-                        <EventChip key={event.id} event={event} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`p-2 flex flex-col gap-1 transition-colors ${
+                          day.isCurrentMonth 
+                            ? isHighlightedColumn ? 'bg-[#F0F4F8]' : 'bg-white' 
+                            : 'bg-white text-slate-300'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className={`text-xs font-bold ${
+                            !day.isCurrentMonth ? 'text-slate-300' : 
+                            (day.date === 5 || day.date === 8 || day.date === 1) ? 'text-blue-600' : 'text-slate-600'
+                          }`}>
+                            {day.date}
+                          </span>
+                          {day.locked && <Lock size={12} className="text-slate-300" />}
+                        </div>
+                        
+                        {/* Events */}
+                        <div className="flex flex-col gap-1 mt-1">
+                          {day.events.map((event) => (
+                            <EventChip key={event.id} event={event} />
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                
+              </div>
             </div>
 
             {/* Calendar Legend */}
-            <div className="p-4 bg-white flex justify-between items-center">
-              <div className="flex gap-6">
+            {/* Diubah menjadi flex-col di mobile agar tidak terpotong */}
+            <div className="p-4 bg-white flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+              <div className="flex flex-wrap gap-4 xl:gap-6">
                 <LegendItem color="bg-blue-600" label="PREVENTIVE MAINTENANCE" />
                 <LegendItem color="bg-red-600" label="CORRECTIVE REPAIR" />
                 <LegendItem color="bg-amber-700" label="GENERAL SERVICE" />
@@ -225,7 +230,6 @@ export default async function MaintenancePage() {
 // 3. REUSABLE MICRO-COMPONENTS
 // ============================================================================
 
-// Komponen Toggle Switch Custom
 function ToggleRow({ label, isActive, icon }: { label: string, isActive: boolean, icon: string }) {
   return (
     <div className="flex justify-between items-center group cursor-pointer">
@@ -237,7 +241,6 @@ function ToggleRow({ label, isActive, icon }: { label: string, isActive: boolean
         )}
         {label}
       </div>
-      {/* Custom Switch UI */}
       <div className={`w-10 h-6 rounded-full flex items-center p-1 transition-colors ${isActive ? 'bg-blue-700' : 'bg-slate-200'}`}>
         <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`}></div>
       </div>
@@ -245,11 +248,9 @@ function ToggleRow({ label, isActive, icon }: { label: string, isActive: boolean
   );
 }
 
-// Komponen Alert Card (Kiri)
 function AlertCard({ alert }: { alert: any }) {
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm relative overflow-hidden">
-      {/* Garis merah di kiri jika butuh aksi (Critical) */}
       {alert.actionRequired && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
       
       <h4 className="font-bold text-slate-800 text-sm mb-1">{alert.title}</h4>
@@ -265,7 +266,6 @@ function AlertCard({ alert }: { alert: any }) {
   );
 }
 
-// Komponen Event Chip dalam Kalender
 function EventChip({ event }: { event: any }) {
   let styles = "";
   
@@ -286,7 +286,6 @@ function EventChip({ event }: { event: any }) {
   );
 }
 
-// Komponen Legenda di bawah kalender
 function LegendItem({ color, label }: { color: string, label: string }) {
   return (
     <div className="flex items-center gap-2">
