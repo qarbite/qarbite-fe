@@ -1,19 +1,68 @@
-import { AlertCircle, Activity, Thermometer, Zap, Settings as SettingsIcon, Wrench } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-// 1. SIMULASI FETCH DATA DARI SUPABASE
+import { createClient } from "@supabase/supabase-js";
+import { AlertCircle, Activity, Thermometer, Zap, Wrench } from "lucide-react";
+import PerformanceChart from "@/components/features/PerformanceChart";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 async function getDashboardData() {
+  const { data: rawAnomalies, error: errAnomalies } = await supabase
+    .from('anomalies')
+    .select(`
+      id, severity, type, created_at,
+      inspections (
+        assets ( asset_code, name )
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (errAnomalies) console.error("Error Fetch Anomalies:", errAnomalies);
+
+  const { data: rawTelemetry, error: errTelemetry } = await supabase
+    .from('telemetry_logs')
+    .select('recorded_time, temperature, vibration')
+    .order('recorded_time', { ascending: true });
+
+  if (errTelemetry) console.error("Error Fetch Telemetry:", errTelemetry);
+
+  const { count: activeMachinesCount } = await supabase
+    .from('assets')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'Operational');
+
+  const anomalies = rawAnomalies?.map((item: any) => {
+    const asset = item.inspections?.assets;
+    const timeFormatted = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    return {
+      id: item.id,
+      title: item.type,
+      unit: `Unit #${asset?.asset_code} • ${asset?.name}`,
+      time: timeFormatted,
+      level: item.severity.toUpperCase(),
+    };
+  }) || [];
+
+  const chartData = rawTelemetry?.map((log: any) => ({
+    time: log.recorded_time,
+    temperature: log.temperature,
+    vibration: log.vibration
+  })) || [];
+
   return {
     kpis: {
-      activeMachines: { value: 124, trend: "+3 since last shift", status: "good" },
-      pendingMaint: { value: "08", trend: "2 Critical Priority", status: "warning" },
-      systemAlerts: { value: 12, trend: "3 unresolved anomalies", status: "critical" },
-      avgEfficiency: { value: "94.2%", trend: "Within optimal range", status: "good" },
+      activeMachines: { value: activeMachinesCount || 0, trend: "+3 since last shift" },
+      pendingMaint: { value: "08", trend: "2 Critical Priority" },
+      systemAlerts: { value: anomalies.length, trend: `${anomalies.filter(a => a.level === 'CRITICAL').length} critical anomalies` },
+      avgEfficiency: { value: "94.2%", trend: "Within optimal range" },
     },
-    anomalies: [
-      { id: 1, title: "Hydraulic Pressure Spike", unit: "Unit #TX-890 • Hydraulic Station A", time: "JUST NOW", level: "CRITICAL" },
-      { id: 2, title: "Harmonic Variance", unit: "Unit #LX-102 • Milling Section", time: "12 MIN AGO", level: "WARNING" },
-      { id: 3, title: "Thermal Threshold Warning", unit: "Unit #MX-450 • Assembly Line 4", time: "45 MIN AGO", level: "INFO" },
-    ]
+    anomalies: anomalies,
+    telemetryChart: chartData
   };
 }
 
@@ -23,8 +72,6 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       
-      {/* ROW 1: KPI CARDS */}
-      {/* Berubah dari grid-cols-4 statis menjadi dinamis */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
           title="ACTIVE MACHINES" value={data.kpis.activeMachines.value} 
@@ -48,28 +95,23 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ROW 2: CHARTS */}
-      {/* Kolom utama menjadi 1 di mobile, 3 di desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chart */}
-        {/* col-span diatur ulang agar mengambil ruang penuh di mobile, dan 2 kolom di desktop */}
-        <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4">
+        
+        <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
               <h3 className="font-bold text-slate-800">Performance Matrix</h3>
               <p className="text-xs text-slate-500">Real-time correlation: Temperature (°C) vs Vibration (Hz)</p>
             </div>
-            <div className="flex gap-4 text-xs font-bold">
+            <div className="flex gap-4 text-xs font-bold shrink-0">
               <span className="flex items-center gap-2 text-blue-600"><span className="w-3 h-1 bg-blue-600 rounded-full"></span> TEMP</span>
               <span className="flex items-center gap-2 text-amber-700"><span className="w-3 h-1 bg-amber-700 rounded-full border-dashed border-t"></span> VIBRATION</span>
             </div>
           </div>
-          <div className="h-64 w-full bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center text-slate-400 text-sm">
-            [ Area untuk Komponen Grafik Garis (Gunakan Recharts) ]
-          </div>
+          
+          <PerformanceChart data={data.telemetryChart} />
         </div>
 
-        {/* Fleet Distribution */}
         <div className="col-span-1 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <h3 className="font-bold text-slate-800 mb-6">Fleet Distribution</h3>
           <div className="flex justify-center mb-8">
@@ -99,9 +141,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ROW 3: LISTS & MAP */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Live Anomaly Feed */}
         <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -110,11 +150,11 @@ export default async function DashboardPage() {
             <button className="text-blue-600 text-sm font-semibold hover:underline">Clear History</button>
           </div>
           <div className="space-y-4">
-            {data.anomalies.map((item) => (
-              <div key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-lg border border-slate-100 bg-slate-50/50 gap-4">
+            {data.anomalies.map((item: any) => (
+              <div key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-lg border border-slate-100 bg-slate-50/50 gap-4 transition-colors hover:bg-slate-50">
                 <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg shrink-0 ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-500' : item.level === 'WARNING' ? 'bg-orange-100 text-orange-500' : 'bg-slate-200 text-slate-500'}`}>
-                    {item.level === 'CRITICAL' ? <AlertCircle size={20} /> : item.level === 'WARNING' ? <Activity size={20} /> : <Thermometer size={20} />}
+                  <div className={`p-2 rounded-lg shrink-0 ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-500' : item.level === 'MEDIUM' ? 'bg-orange-100 text-orange-500' : 'bg-slate-200 text-slate-500'}`}>
+                    {item.level === 'CRITICAL' ? <AlertCircle size={20} /> : item.level === 'MEDIUM' ? <Activity size={20} /> : <Thermometer size={20} />}
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-800">{item.title}</h4>
@@ -123,7 +163,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="sm:text-right flex sm:block items-center justify-between">
                   <p className="text-xs font-bold text-slate-800 sm:mb-1">{item.time}</p>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-600' : item.level === 'WARNING' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'}`}>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-600' : item.level === 'MEDIUM' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'}`}>
                     {item.level}
                   </span>
                 </div>
@@ -132,7 +172,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Floor Status */}
         <div className="col-span-1 bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
           <div className="h-40 bg-blue-900 rounded-lg mb-4 overflow-hidden relative">
             <img src="https://images.unsplash.com/photo-1565514020179-026b92b84bb6?auto=format&fit=crop&q=80" alt="Factory Floor" className="w-full h-full object-cover opacity-60 mix-blend-overlay" />
@@ -158,12 +197,10 @@ export default async function DashboardPage() {
           </button>
         </div>
       </div>
-
     </div>
   );
 }
 
-// 2. KOMPONEN KECIL: REUSABLE KPI CARD
 function KpiCard({ title, value, subtitle, icon, borderColor = "", subtitleColor = "text-blue-600" }: any) {
   return (
     <div className={`bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-b-4 ${borderColor || "border-b-transparent"}`}>
