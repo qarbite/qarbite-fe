@@ -10,7 +10,13 @@ const supabase = createClient(
 );
 
 async function getDashboardData() {
-  const { data: rawAnomalies, error: errAnomalies } = await supabase
+  const { data: assets, error: errAssets } = await supabase
+    .from('assets')
+    .select('status');
+
+  if (errAssets) console.error("Error Fetch Assets:", errAssets);
+
+  const { data: allAnomalies, error: errAnomalies } = await supabase
     .from('anomalies')
     .select(`
       id, severity, type, created_at,
@@ -18,50 +24,59 @@ async function getDashboardData() {
         assets ( asset_code, name )
       )
     `)
-    .order('created_at', { ascending: false })
-    .limit(3);
+    .order('created_at', { ascending: false });
 
   if (errAnomalies) console.error("Error Fetch Anomalies:", errAnomalies);
 
-  const { data: rawTelemetry, error: errTelemetry } = await supabase
+  const { data: telemetry, error: errTelemetry } = await supabase
     .from('telemetry_logs')
     .select('recorded_time, temperature, vibration')
     .order('recorded_time', { ascending: true });
 
   if (errTelemetry) console.error("Error Fetch Telemetry:", errTelemetry);
 
-  const { count: activeMachinesCount } = await supabase
-    .from('assets')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'Operational');
+  const totalAssets = assets?.length || 1;
+  const opCount = assets?.filter(a => a.status.toUpperCase() === 'OPERATIONAL').length || 0;
+  const maintCount = assets?.filter(a => a.status.toUpperCase() === 'SERVICE DUE' || a.status.toUpperCase() === 'MAINTENANCE').length || 0;
+  const offlineCount = assets?.filter(a => a.status.toUpperCase() === 'CRITICAL').length || 0;
+  const idleCount = Math.max(0, totalAssets - opCount - maintCount - offlineCount);
+  const totalAlerts = allAnomalies?.length || 0;
+  const criticalAlerts = allAnomalies?.filter(a => a.severity === 'Critical').length || 0;
 
-  const anomalies = rawAnomalies?.map((item: any) => {
-    const asset = item.inspections?.assets;
+  const recentAnomalies = allAnomalies?.slice(0, 4).map((item: any) => {
+    const assetData = Array.isArray(item.inspections) ? item.inspections[0]?.assets : item.inspections?.assets;
     const timeFormatted = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     return {
       id: item.id,
       title: item.type,
-      unit: `Unit #${asset?.asset_code} • ${asset?.name}`,
+      unit: `Unit #${assetData?.asset_code || 'UNK'} • ${assetData?.name || 'Unknown Asset'}`,
       time: timeFormatted,
       level: item.severity.toUpperCase(),
     };
   }) || [];
 
-  const chartData = rawTelemetry?.map((log: any) => ({
+  const chartData = telemetry?.map((log: any) => ({
     time: log.recorded_time,
-    temperature: log.temperature,
-    vibration: log.vibration
+    temperature: Number(log.temperature),
+    vibration: Number(log.vibration)
   })) || [];
 
   return {
     kpis: {
-      activeMachines: { value: activeMachinesCount || 0, trend: "+3 since last shift" },
-      pendingMaint: { value: "08", trend: "2 Critical Priority" },
-      systemAlerts: { value: anomalies.length, trend: `${anomalies.filter(a => a.level === 'CRITICAL').length} critical anomalies` },
-      avgEfficiency: { value: "94.2%", trend: "Within optimal range" },
+      activeMachines: { value: opCount, trend: "Live status" },
+      pendingMaint: { value: maintCount < 10 ? `0${maintCount}` : maintCount, trend: "Scheduled units" },
+      systemAlerts: { value: totalAlerts, trend: `${criticalAlerts} critical priorities` },
+      avgEfficiency: { value: ((opCount / totalAssets) * 100).toFixed(1) + "%", trend: "Based on fleet status" },
     },
-    anomalies: anomalies,
+    fleetStats: {
+      total: assets?.length || 0,
+      opPct: Math.round((opCount / totalAssets) * 100),
+      maintPct: Math.round((maintCount / totalAssets) * 100),
+      offlinePct: Math.round((offlineCount / totalAssets) * 100),
+      idlePct: Math.round((idleCount / totalAssets) * 100),
+    },
+    anomalies: recentAnomalies,
     telemetryChart: chartData
   };
 }
@@ -70,8 +85,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData();
 
   return (
-    <div className="flex flex-col gap-6">
-      
+    <div className="flex flex-col gap-6 max-w-[1400px] mx-auto pb-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
           title="ACTIVE MACHINES" value={data.kpis.activeMachines.value} 
@@ -95,8 +109,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">        
         <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
@@ -116,26 +129,26 @@ export default async function DashboardPage() {
           <h3 className="font-bold text-slate-800 mb-6">Fleet Distribution</h3>
           <div className="flex justify-center mb-8">
              <div className="w-32 h-32 rounded-lg border-[16px] border-blue-600 border-r-blue-100 border-b-slate-200 border-l-red-500 flex flex-col items-center justify-center">
-               <span className="text-2xl font-bold">124</span>
+               <span className="text-2xl font-bold">{data.fleetStats.total}</span>
                <span className="text-xs text-slate-500 font-bold">TOTAL</span>
              </div>
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-slate-500 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-600"></span> Operational</p>
-              <p className="font-bold pl-4">88%</p>
+              <p className="font-bold pl-4">{data.fleetStats.opPct}%</p>
             </div>
             <div>
               <p className="text-slate-500 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-700"></span> Idle</p>
-              <p className="font-bold pl-4">7%</p>
+              <p className="font-bold pl-4">{data.fleetStats.idlePct}%</p>
             </div>
             <div>
               <p className="text-slate-500 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span> Offline</p>
-              <p className="font-bold pl-4">5%</p>
+              <p className="font-bold pl-4">{data.fleetStats.offlinePct}%</p>
             </div>
             <div>
               <p className="text-slate-500 flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-300"></span> Maint.</p>
-              <p className="font-bold pl-4">3%</p>
+              <p className="font-bold pl-4">{data.fleetStats.maintPct}%</p>
             </div>
           </div>
         </div>
@@ -150,25 +163,29 @@ export default async function DashboardPage() {
             <button className="text-blue-600 text-sm font-semibold hover:underline">Clear History</button>
           </div>
           <div className="space-y-4">
-            {data.anomalies.map((item: any) => (
-              <div key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-lg border border-slate-100 bg-slate-50/50 gap-4 transition-colors hover:bg-slate-50">
-                <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg shrink-0 ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-500' : item.level === 'MEDIUM' ? 'bg-orange-100 text-orange-500' : 'bg-slate-200 text-slate-500'}`}>
-                    {item.level === 'CRITICAL' ? <AlertCircle size={20} /> : item.level === 'MEDIUM' ? <Activity size={20} /> : <Thermometer size={20} />}
+            {data.anomalies.length > 0 ? (
+              data.anomalies.map((item: any) => (
+                <div key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-lg border border-slate-100 bg-slate-50/50 gap-4 transition-colors hover:bg-slate-50">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-lg shrink-0 ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-500' : item.level === 'HIGH' ? 'bg-orange-100 text-orange-500' : 'bg-slate-200 text-slate-500'}`}>
+                      {item.level === 'CRITICAL' ? <AlertCircle size={20} /> : item.level === 'HIGH' ? <Activity size={20} /> : <Thermometer size={20} />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800">{item.title}</h4>
+                      <p className="text-xs text-slate-500">{item.unit}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-800">{item.title}</h4>
-                    <p className="text-xs text-slate-500">{item.unit}</p>
+                  <div className="sm:text-right flex sm:block items-center justify-between">
+                    <p className="text-xs font-bold text-slate-800 sm:mb-1">{item.time}</p>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-600' : item.level === 'HIGH' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'}`}>
+                      {item.level}
+                    </span>
                   </div>
                 </div>
-                <div className="sm:text-right flex sm:block items-center justify-between">
-                  <p className="text-xs font-bold text-slate-800 sm:mb-1">{item.time}</p>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${item.level === 'CRITICAL' ? 'bg-red-100 text-red-600' : item.level === 'MEDIUM' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'}`}>
-                    {item.level}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-center text-slate-500 py-8 text-sm">No active anomalies detected across the fleet.</div>
+            )}
           </div>
         </div>
 
@@ -185,12 +202,12 @@ export default async function DashboardPage() {
               <span className="text-slate-500">Occupancy</span>
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full">
-              <div className="bg-blue-600 h-1.5 rounded-full w-[85%]"></div>
+              <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: data.kpis.avgEfficiency.value }}></div>
             </div>
           </div>
           <div className="flex justify-between items-center mb-6 text-xs">
-            <span className="text-slate-500">Sensor Mesh</span>
-            <span className="text-blue-600 font-bold">Active (99.8%)</span>
+            <span className="text-slate-500">Active Sensors</span>
+            <span className="text-blue-600 font-bold">{data.kpis.activeMachines.value} Node(s)</span>
           </div>
           <button className="w-full mt-auto bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-lg text-sm transition-colors">
             OPEN SITE MANAGER

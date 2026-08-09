@@ -1,82 +1,61 @@
+export const dynamic = "force-dynamic";
+
 import React from 'react';
+import { createClient } from "@supabase/supabase-js";
 import { 
   Download, Plus, CheckCircle, Wrench, AlertTriangle, Clock, 
   ArrowRight, MoreHorizontal, Settings, Bot, XCircle, Monitor,
-  Filter,
-  Activity
+  Filter, Activity
 } from 'lucide-react';
 
-// ============================================================================
-// 1. SIMULASI FETCH DATA DARI SUPABASE
-// ============================================================================
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 async function getMachinesData() {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  const { data: machineList, error } = await supabase
+    .from('assets')
+    .select('*')
+    .order('status', { ascending: true });
+
+  if (error) console.error("Error fetching machines:", error);
+
+  const machines = machineList || [];
+
+  const operationalCount = machines.filter(m => m.status === 'OPERATIONAL').length;
+  const maintenanceCount = machines.filter(m => m.status === 'MAINTENANCE' || m.status === 'SERVICE DUE').length;
+  const criticalCount = machines.filter(m => m.status === 'CRITICAL').length;
+  
+  const totalMachines = machines.length > 0 ? machines.length : 1;
+  const healthIndex = Math.round((operationalCount / totalMachines) * 100);
+
+  const mappedMachines = machines.map((asset) => ({
+    id: asset.asset_code, 
+    name: asset.name,
+    location: asset.location,
+    factory: asset.factory, 
+    serviceAge: asset.service_age,
+    maxAge: asset.max_age,
+    status: asset.status,
+    aiRisk: asset.ai_risk,
+    riskLabel: asset.risk_label,
+    icon: asset.icon
+  }));
 
   return {
     stats: {
-      healthIndex: 94.2,
-      healthTrend: "+2.4%",
-      operational: 142,
-      maintenance: 18,
-      criticalFailures: 4,
-      avgResponseTime: "24h"
+      healthIndex: healthIndex,
+      healthTrend: "-12.5%",
+      operational: operationalCount,
+      maintenance: maintenanceCount,
+      criticalFailures: criticalCount,
+      avgResponseTime: "1.2h"
     },
-    machines: [
-      {
-        id: "CNC-X4-9022",
-        name: "High-Precision Lathe",
-        location: "Zone A, Floor 2",
-        factory: "BER-FACTORY-04",
-        serviceAge: 3.2,
-        maxAge: 10,
-        status: "OPERATIONAL",
-        aiRisk: 4,
-        riskLabel: "Minimal Risk",
-        icon: "cnc"
-      },
-      {
-        id: "ARM-ROB-114",
-        name: "Assembly Unit",
-        location: "Zone B, Line 3",
-        factory: "BER-FACTORY-04",
-        serviceAge: 1.8,
-        maxAge: 10,
-        status: "SERVICE DUE",
-        aiRisk: 28,
-        riskLabel: "Bearing Wear",
-        icon: "robot"
-      },
-      {
-        id: "HYD-PRS-400",
-        name: "Hydraulic Press",
-        location: "Zone D, Utility",
-        factory: "BER-FACTORY-04",
-        serviceAge: 8.5,
-        maxAge: 10,
-        status: "CRITICAL",
-        aiRisk: 82,
-        riskLabel: "Pressure Leak",
-        icon: "press"
-      },
-      {
-        id: "CONV-L1-02",
-        name: "Smart Conveyor",
-        location: "Zone B, Line 1",
-        factory: "BER-FACTORY-04",
-        serviceAge: 0.5,
-        maxAge: 10,
-        status: "OPERATIONAL",
-        aiRisk: 1,
-        riskLabel: "Stable",
-        icon: "conveyor"
-      }
-    ]
+    machines: mappedMachines
   };
 }
 
-// ============================================================================
-// 2. HALAMAN UTAMA (SERVER COMPONENT)
-// ============================================================================
 export default async function MachinesPage() {
   const data = await getMachinesData();
 
@@ -84,7 +63,6 @@ export default async function MachinesPage() {
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto pb-8">
       
       {/* HEADER SECTION */}
-      {/* Diubah menjadi flex-col di mobile agar tombol turun ke bawah */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 sm:gap-0">
         <div>
           <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-1">Asset Management</h2>
@@ -100,11 +78,8 @@ export default async function MachinesPage() {
         </div>
       </div>
 
-      {/* KPI CARDS (TOP ROW) */}
-      {/* 1 kolom di mobile, 3 kolom di layar besar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Health Index Card */}
-       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 relative overflow-hidden flex flex-col justify-between">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 relative overflow-hidden flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-600 mb-2 uppercase tracking-wider">Fleet Health Index</h3>
             <p className="text-5xl font-black text-blue-700">{data.stats.healthIndex}%</p>
@@ -120,7 +95,6 @@ export default async function MachinesPage() {
           </div>
         </div>
 
-        {/* Operational Card */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-blue-600 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Operational</h3>
@@ -132,7 +106,6 @@ export default async function MachinesPage() {
           </div>
         </div>
 
-        {/* Maintenance Card */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 border-l-4 border-l-amber-700 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider">Maintenance</h3>
@@ -145,8 +118,6 @@ export default async function MachinesPage() {
         </div>
       </div>
 
-      {/* SECONDARY STATS (MIDDLE ROW) */}
-      {/* 1 kolom mobile, 2 tablet, 4 desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-red-50 rounded-xl p-4 border border-red-100 flex items-center gap-4">
           <AlertTriangle className="text-red-500" size={32} />
@@ -162,11 +133,10 @@ export default async function MachinesPage() {
             <p className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">Avg. Response Time</p>
           </div>
         </div>
-        {/* col-span-1 di mobile, col-span-2 di sm dan lg */}
         <div className="col-span-1 sm:col-span-2 bg-white rounded-xl p-4 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm gap-4 sm:gap-0">
           <div>
             <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">AI Failure Prediction</p>
-            <p className="text-sm text-slate-500 mt-1">Neural models suggest 3 potential bearing failures in Zone B.</p>
+            <p className="text-sm text-slate-500 mt-1">Neural models suggest {data.stats.criticalFailures} potential failures across active zones.</p>
           </div>
           <button className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline self-start sm:self-auto shrink-0">
             Review Alert <ArrowRight size={16} />
@@ -174,9 +144,7 @@ export default async function MachinesPage() {
         </div>
       </div>
 
-      {/* TABLE SECTION */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Table Toolbar */}
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-50/50 gap-4 md:gap-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
             <h3 className="font-bold text-slate-800">Machinery Fleet</h3>
@@ -191,7 +159,6 @@ export default async function MachinesPage() {
           </button>
         </div>
 
-        {/* The Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
@@ -205,73 +172,75 @@ export default async function MachinesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.machines.map((machine) => (
-                <tr key={machine.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 pl-6 flex items-center gap-4">
-                    <div className="p-2 bg-slate-100 text-slate-600 rounded-lg">
-                      {machine.icon === 'cnc' && <Settings size={20} />}
-                      {machine.icon === 'robot' && <Bot size={20} />}
-                      {machine.icon === 'press' && <XCircle size={20} className="text-red-500" />}
-                      {machine.icon === 'conveyor' && <Monitor size={20} />}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900 text-sm">{machine.id}</p>
-                      <p className="text-xs text-slate-500">{machine.name}</p>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-sm font-medium text-slate-800">{machine.location}</p>
-                    <p className="text-xs text-slate-500">{machine.factory}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-sm font-bold text-slate-800 mb-1">{machine.serviceAge} Years</p>
-                    <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${machine.serviceAge > 7 ? 'bg-red-500' : 'bg-blue-600'}`} 
-                        style={{ width: `${(machine.serviceAge / machine.maxAge) * 100}%` }}
-                      ></div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <StatusBadge status={machine.status} />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <RiskCircle risk={machine.aiRisk} />
-                      <span className={`text-xs font-bold ${machine.aiRisk > 50 ? 'text-red-600' : machine.aiRisk > 20 ? 'text-amber-700' : 'text-slate-500'}`}>
-                        {machine.riskLabel}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button className="text-slate-400 hover:text-slate-700">
-                      <MoreHorizontal size={20} />
-                    </button>
+              {data.machines.length > 0 ? (
+                data.machines.map((machine) => (
+                  <tr key={machine.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4 pl-6 flex items-center gap-4">
+                      <div className="p-2 bg-slate-100 text-slate-600 rounded-lg">
+                        {machine.icon === 'cnc' && <Settings size={20} />}
+                        {machine.icon === 'robot' && <Bot size={20} />}
+                        {machine.icon === 'press' && <XCircle size={20} className="text-red-500" />}
+                        {machine.icon === 'conveyor' && <Monitor size={20} />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{machine.id}</p>
+                        <p className="text-xs text-slate-500">{machine.name}</p>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-sm font-medium text-slate-800">{machine.location}</p>
+                      <p className="text-xs text-slate-500">{machine.factory}</p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-sm font-bold text-slate-800 mb-1">{machine.serviceAge} Years</p>
+                      <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${machine.serviceAge > 7 ? 'bg-red-500' : 'bg-blue-600'}`} 
+                          style={{ width: `${(machine.serviceAge / machine.maxAge) * 100}%` }}
+                        ></div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <StatusBadge status={machine.status} />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <RiskCircle risk={machine.aiRisk} />
+                        <span className={`text-xs font-bold ${machine.aiRisk > 50 ? 'text-red-600' : machine.aiRisk > 20 ? 'text-amber-700' : 'text-slate-500'}`}>
+                          {machine.riskLabel}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button className="text-slate-400 hover:text-slate-700">
+                        <MoreHorizontal size={20} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-slate-500 font-medium">
+                    Tidak ada data mesin. Pastikan Database Supabase Anda telah terisi dan RLS dimatikan.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
         
-        {/* Pagination Dummy */}
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50/50 gap-4 sm:gap-0">
-          <p className="text-xs text-slate-500 font-medium">Showing <strong className="text-slate-800">12</strong> of <strong>164</strong> assets</p>
+          <p className="text-xs text-slate-500 font-medium">Showing <strong className="text-slate-800">{data.machines.length}</strong> of <strong>{data.machines.length}</strong> assets</p>
           <div className="flex gap-1">
             <button className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-400 hover:bg-slate-50 text-sm font-bold">{'<'}</button>
             <button className="w-8 h-8 flex items-center justify-center bg-blue-700 text-white rounded text-sm font-bold shadow-sm">1</button>
-            <button className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-50 text-sm font-bold">2</button>
             <button className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-400 hover:bg-slate-50 text-sm font-bold">{'>'}</button>
           </div>
         </div>
       </div>
 
-      {/* BOTTOM WIDGETS */}
-      {/* 1 kolom di mobile, 3 di lg */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Telemetry View */}
         <div className="col-span-1 lg:col-span-2 bg-slate-900 rounded-xl overflow-hidden relative shadow-sm h-auto sm:h-64 border border-slate-200 flex flex-col justify-end">
-           {/* Dummy Image Background */}
            <img 
             src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80" 
             alt="Factory Floor" 
@@ -287,7 +256,7 @@ export default async function MachinesPage() {
               <div className="flex gap-6 text-left sm:text-right">
                 <div>
                   <p className="text-xs text-slate-300 sm:text-slate-500 font-medium">Active</p>
-                  <p className="text-sm font-bold text-amber-500 sm:text-amber-700">02 Points</p>
+                  <p className="text-sm font-bold text-amber-500 sm:text-amber-700">{data.stats.operational} Points</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-300 sm:text-slate-500 font-medium">Connectivity</p>
@@ -297,14 +266,13 @@ export default async function MachinesPage() {
            </div>
         </div>
 
-        {/* AI Predictive Card */}
         <div className="col-span-1 bg-blue-700 rounded-xl p-6 shadow-sm flex flex-col justify-between text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent bg-[length:10px_10px]"></div>
           
           <div className="relative z-10">
             <h3 className="text-xl font-bold mb-4">AI Predictive Maintenance</h3>
             <p className="text-blue-100 text-sm leading-relaxed">
-              Our neural engine has analyzed the vibration data from Zone B. Scheduling a check for Arm-ROB-114 today could prevent 4 hours of downtime next week.
+              Our neural engine has analyzed the vibration data from Zone B. Scheduling a check today could prevent 4 hours of downtime next week.
             </p>
           </div>
           <button className="relative z-10 w-full bg-white text-blue-700 font-bold py-3 rounded-lg text-sm mt-6 hover:bg-blue-50 transition-colors shadow-sm flex justify-center items-center gap-2">
@@ -312,14 +280,9 @@ export default async function MachinesPage() {
           </button>
         </div>
       </div>
-
     </div>
   );
 }
-
-// ============================================================================
-// 3. REUSABLE MICRO-COMPONENTS (Bisa dipindah ke folder /components/ui nantinya)
-// ============================================================================
 
 function StatusBadge({ status }: { status: string }) {
   let styles = "";
