@@ -1,73 +1,140 @@
+export const dynamic = "force-dynamic";
+
 import React from 'react';
+import { createClient } from "@supabase/supabase-js";
 import { 
   ArrowRight, CheckCircle2, Clock, AlertTriangle, 
   Plus
 } from 'lucide-react';
 
-// ============================================================================
-// 1. SIMULASI FETCH DATA DARI SUPABASE
-// ============================================================================
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 async function getAnalyticsData() {
-  await new Promise(resolve => setTimeout(resolve, 400));
+  const { data: assets, error: errAssets } = await supabase
+    .from('assets')
+    .select('*');
+
+  if (errAssets) console.error("Error Fetching Assets:", errAssets);
+  const safeAssets = assets || [];
+
+  const { data: recommendations, error: errRecs } = await supabase
+    .from('recommendations')
+    .select(`
+      id, action, priority, estimated_time_to_failure,
+      inspections (
+        assets ( asset_code )
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (errRecs) console.error("Error Fetching Recommendations:", errRecs);
+
+  const { data: anomalies, error: errAnomalies } = await supabase
+    .from('anomalies')
+    .select('created_at');
+
+  if (errAnomalies) console.error("Error Fetching Anomalies:", errAnomalies);
+
+  const rulData = safeAssets.map((asset) => {
+    const daysLeft = Math.max(0, Math.round((asset.max_age - asset.service_age) * 365));
+    const xPos = Math.min(95, Math.max(5, (asset.service_age / asset.max_age) * 100));
+    const yPos = Math.min(90, Math.max(10, 100 - asset.ai_risk));
+
+    let rulStatus = "Operational";
+    if (asset.status === 'CRITICAL') rulStatus = "Critical";
+    else if (asset.status === 'SERVICE DUE' || asset.status === 'MAINTENANCE') rulStatus = "Warning";
+
+    return {
+      id: asset.asset_code,
+      days: daysLeft,
+      status: rulStatus,
+      x: xPos,
+      y: yPos
+    };
+  });
+
+  const insights = recommendations?.map((rec: any) => {
+    let color = "blue";
+    if (rec.priority === 'HIGH PRIORITY') color = "red";
+    else if (rec.priority === 'INVENTORY ALERT') color = "amber";
+
+    const ins = Array.isArray(rec.inspections) ? rec.inspections[0] : rec.inspections;
+    const ast = Array.isArray(ins?.assets) ? ins?.assets[0] : ins?.assets;
+    const assetCode = ast?.asset_code || 'Fleet';
+
+    return {
+      id: rec.id,
+      type: rec.priority,
+      title: `Action Required: ${assetCode}`,
+      description: rec.action,
+      color: color
+    };
+  }) || [];
+
+  let shiftMatrix = [
+    { name: "Shift A (06:00)", data: [0, 0, 0, 0, 0, 0, 0] }, // index: Sun(0) -> Sat(6)
+    { name: "Shift B (14:00)", data: [0, 0, 0, 0, 0, 0, 0] },
+    { name: "Shift C (22:00)", data: [0, 0, 0, 0, 0, 0, 0] },
+  ];
+
+  anomalies?.forEach((a) => {
+    const d = new Date(a.created_at);
+    const dayIdx = d.getDay(); // 0 = Sunday, 1 = Monday
+    const hour = d.getHours();
+    
+    let shiftIdx = 0; // Shift A: 06:00 - 13:59
+    if (hour >= 14 && hour < 22) shiftIdx = 1; // Shift B: 14:00 - 21:59
+    else if (hour >= 22 || hour < 6) shiftIdx = 2; // Shift C: 22:00 - 05:59
+
+    shiftMatrix[shiftIdx].data[dayIdx] += 1;
+  });
+
+  const mappedMatrix = shiftMatrix.map(shift => {
+    const mappedData = [
+      shift.data[1], // MON
+      shift.data[2], // TUE
+      shift.data[3], // WED
+      shift.data[4], // THU
+      shift.data[5], // FRI
+      shift.data[6], // SAT
+      shift.data[0], // SUN
+    ];
+    return { name: shift.name, data: mappedData.map(v => Math.min(v, 3)) };
+  });
+
+  const totalAssets = safeAssets.length || 1;
+  const opCount = safeAssets.filter(a => a.status === 'OPERATIONAL').length;
+  const critCount = safeAssets.filter(a => a.status === 'CRITICAL').length;
+  const maintCount = safeAssets.filter(a => a.status === 'SERVICE DUE' || a.status === 'MAINTENANCE').length;
+
+  const reliability = ((opCount / totalAssets) * 100).toFixed(1);
+  const downtime = ((critCount / totalAssets) * 100).toFixed(1);
+  const estimatedRepairHours = maintCount > 0 ? (maintCount * 4.5).toFixed(1) : "0";
 
   return {
-    rulData: [
-      { id: "CNC-01", days: 12, status: "Critical", x: 15, y: 70 },
-      { id: "HYD-04", days: 142, status: "Operational", x: 35, y: 20 },
-      { id: "LATH-09", days: 98, status: "Operational", x: 55, y: 40 },
-      { id: "MIL-42", days: 42, status: "Warning", x: 75, y: 60 },
-      { id: "PRSS-14", days: 114, status: "Operational", x: 90, y: 30 },
-    ],
-    insights: [
-      {
-        id: "INS-1",
-        type: "HIGH PRIORITY",
-        title: "Service CNC-01 immediately",
-        description: "Vibration signatures indicate imminent bearing failure in spindle unit B-4.",
-        color: "red"
-      },
-      {
-        id: "INS-2",
-        type: "OPTIMIZATION",
-        title: "Reduce hydraulic pressure on HYD-04",
-        description: "Lowering PSI by 5% will extend component life by an estimated 22 days without affecting output.",
-        color: "blue"
-      },
-      {
-        id: "INS-3",
-        type: "INVENTORY ALERT",
-        title: "Restock LATH-09 Seal Kits",
-        description: "Predictive model suggests maintenance window opening in 14 days. 0 kits in stock.",
-        color: "amber"
-      }
-    ],
+    rulData: rulData,
+    insights: insights,
     matrix: {
       days: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
-      shifts: [
-        { name: "Shift A (06:00)", data: [1, 1, 2, 1, 1, 0, 0] },
-        { name: "Shift B (14:00)", data: [2, 2, 3, 2, 2, 1, 1] },
-        { name: "Shift C (22:00)", data: [1, 1, 1, 1, 1, 0, 0] },
-      ]
+      shifts: mappedMatrix
     },
     kpis: {
-      reliability: { value: "98.4%", trend: "↑ 1.2%", desc: "from last quarter", status: "good" },
-      repairTime: { value: "3.2 Hrs", trend: "↓ 15m", desc: "decrease with AI routing", status: "warning" },
-      downtime: { value: "0.5%", trend: "Low", desc: "within optimal range", status: "critical" },
+      reliability: { value: `${reliability}%`, trend: "Active", desc: "fleet reliability", status: "good" },
+      repairTime: { value: `${estimatedRepairHours} Hrs`, trend: "Est.", desc: "maintenance backlog", status: "warning" },
+      downtime: { value: `${downtime}%`, trend: critCount > 0 ? "High" : "Optimal", desc: "critical offline rate", status: "critical" },
     }
   };
 }
 
-// ============================================================================
-// 2. HALAMAN UTAMA (SERVER COMPONENT)
-// ============================================================================
 export default async function AnalyticsPage() {
   const data = await getAnalyticsData();
 
   return (
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto pb-12 relative">
-      
-      {/* HEADER SECTION */}
-      {/* Diubah menjadi flex-col di mobile agar judul & tombol tidak berdesakan */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-2 gap-4 sm:gap-0">
         <div>
           <h2 className="text-[11px] font-bold text-amber-700 tracking-widest uppercase mb-2">Predictive Maintenance Hub</h2>
@@ -83,44 +150,42 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* TOP ROW: RUL CHART & INSIGHTS */}
-      {/* grid-cols-12 sudah responsif (span-12 di mobile, span-8/4 di desktop) */}
       <div className="grid grid-cols-12 gap-6">
-        
-        {/* RUL Scatter Chart (Span 8) */}
         <div className="col-span-12 lg:col-span-8 bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col overflow-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-3 sm:gap-0">
             <div>
               <h3 className="font-bold text-slate-900 text-lg">Remaining Useful Life (RUL)</h3>
-              <p className="text-xs text-slate-500">Estimated machine longevity across fleet</p>
+              <p className="text-xs text-slate-500">Estimated machine longevity based on database</p>
             </div>
             <div className="flex bg-slate-50 border border-slate-100 rounded-lg p-1 shrink-0">
-              <span className="px-3 py-1 text-[10px] font-bold text-blue-600 bg-white shadow-sm rounded-md">Critical</span>
+              <span className="px-3 py-1 text-[10px] font-bold text-red-500 bg-white shadow-sm rounded-md">Critical</span>
               <span className="px-3 py-1 text-[10px] font-bold text-slate-500">Operational</span>
             </div>
           </div>
           
-          {/* Mock Chart Area */}
-          <div className="flex-1 relative min-h-[250px] border-b border-l border-slate-100 mt-4">
+          <div className="flex-1 relative min-h-[250px] border-b border-l border-slate-100 mt-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-10">
             {data.rulData.map((point) => (
               <div 
                 key={point.id}
-                className="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2"
+                className="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-110"
                 style={{ left: `${point.x}%`, top: `${point.y}%` }}
               >
                 <span className="text-[10px] font-bold text-slate-600">{point.id}</span>
-                <span className={`text-xs md:text-sm font-black ${
+                <span className={`text-xs md:text-sm font-black drop-shadow-sm ${
                   point.status === 'Critical' ? 'text-red-500' : 
                   point.status === 'Warning' ? 'text-amber-600' : 'text-blue-600'
                 }`}>
                   {point.days} Days
                 </span>
+                <div className={`w-2 h-2 rounded-full mt-1 ${
+                  point.status === 'Critical' ? 'bg-red-500 animate-pulse' : 
+                  point.status === 'Warning' ? 'bg-amber-500' : 'bg-blue-500'
+                }`}></div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* AI Strategic Insights (Span 4) */}
         <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 flex flex-col">
           <div className="mb-6">
             <h3 className="font-bold text-slate-900 text-lg">AI Strategic Insights</h3>
@@ -128,9 +193,13 @@ export default async function AnalyticsPage() {
           </div>
           
           <div className="flex flex-col gap-4 flex-1">
-            {data.insights.map((insight) => (
-              <InsightCard key={insight.id} data={insight} />
-            ))}
+            {data.insights.length > 0 ? (
+              data.insights.map((insight: any) => (
+                <InsightCard key={insight.id} data={insight} />
+              ))
+            ) : (
+              <p className="text-sm text-slate-400 text-center py-8">All systems optimal. No immediate actions required.</p>
+            )}
           </div>
 
           <button className="w-full mt-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
@@ -139,7 +208,6 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* MIDDLE ROW: ISSUE FREQUENCY MATRIX */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-3 sm:gap-0">
           <div>
@@ -153,17 +221,14 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Ditambahkan overflow-x-auto agar tabel matrix bisa digeser ke kanan-kiri di mobile */}
         <div className="overflow-x-auto pb-4">
           <div className="flex flex-col gap-2 min-w-[500px]">
-            {/* Header Row (Days) */}
             <div className="flex ml-24 gap-2">
               {data.matrix.days.map((day) => (
                 <div key={day} className="flex-1 text-center text-[10px] font-bold text-slate-400 tracking-widest">{day}</div>
               ))}
             </div>
             
-            {/* Grid Rows (Shifts) */}
             {data.matrix.shifts.map((shift, idx) => (
               <div key={idx} className="flex items-center gap-4">
                 <div className="w-24 text-[10px] font-bold text-slate-600 shrink-0">{shift.name}</div>
@@ -178,8 +243,6 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
-      {/* BOTTOM ROW: KPIS */}
-      {/* Berubah menjadi grid-cols-1 di mobile, lalu md:grid-cols-3 di tablet/desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
         <KpiCard 
           title="ASSET RELIABILITY"
@@ -203,37 +266,26 @@ export default async function AnalyticsPage() {
           trend={data.kpis.downtime.trend}
           desc={data.kpis.downtime.desc}
           icon={<AlertTriangle size={18} className="text-red-500" />}
-          trendColor="text-blue-600"
-          isAlert={true}
+          trendColor={data.kpis.downtime.trend === 'High' ? 'text-red-500' : 'text-blue-600'}
+          isAlert={data.kpis.downtime.trend === 'High'}
         />
       </div>
-
-      {/* STATUS FOOTER */}
-      {/* Disesuaikan menjadi stack vertical di layar kecil */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-4 text-[10px] font-bold tracking-widest text-slate-400 gap-4 md:gap-0">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-6">
           <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div> AI ENGINE: ACTIVE</span>
-          <span>DATA REFRESH: 2m AGO</span>
+          <span>DATA REFRESH: LIVE</span>
           <span>FLEET CONNECTIVITY: 100%</span>
         </div>
         <div>
           © 2026 QARBITE INDUSTRIAL PRECISION
         </div>
       </div>
-
-      {/* Floating Action Button (FAB) */}
-      {/* Menggunakan fixed di mobile agar selalu melayang, absolute di desktop mengikuti container */}
       <button className="fixed bottom-6 right-6 md:absolute md:bottom-0 md:right-0 w-12 h-12 bg-slate-900 text-white rounded-xl shadow-lg flex items-center justify-center hover:bg-slate-800 transition-colors z-30">
         <Plus size={24} />
       </button>
-
     </div>
   );
 }
-
-// ============================================================================
-// 3. REUSABLE MICRO-COMPONENTS
-// ============================================================================
 
 function InsightCard({ data }: { data: any }) {
   let borderColor = "border-l-blue-500";
@@ -251,7 +303,7 @@ function InsightCard({ data }: { data: any }) {
     <div className={`bg-slate-50 rounded-r-lg border border-slate-100 border-l-4 ${borderColor} p-4 shadow-sm`}>
       <p className={`text-[9px] font-black tracking-widest uppercase mb-1 ${typeColor}`}>{data.type}</p>
       <h4 className="text-xs font-bold text-slate-900 mb-2">{data.title}</h4>
-      <p className="text-[10px] text-slate-500 leading-relaxed">{data.description}</p>
+      <p className="text-[10px] text-slate-500 leading-relaxed line-clamp-2">{data.description}</p>
     </div>
   );
 }
@@ -261,7 +313,7 @@ function MatrixCell({ intensity }: { intensity: number }) {
   
   if (intensity === 1) bgColor = "bg-[#B3D4F0]"; // Low (Light Blue)
   if (intensity === 2) bgColor = "bg-[#4B90D6]"; // Med (Mid Blue)
-  if (intensity === 3) bgColor = "bg-[#0A58CA]"; // High (Dark Blue)
+  if (intensity >= 3) bgColor = "bg-[#0A58CA]"; // High (Dark Blue)
 
   return (
     <div className={`flex-1 h-8 sm:h-10 rounded-md ${bgColor} transition-colors hover:opacity-80`}></div>
@@ -270,7 +322,7 @@ function MatrixCell({ intensity }: { intensity: number }) {
 
 function KpiCard({ title, value, trend, desc, icon, trendColor, isAlert = false }: any) {
   return (
-    <div className={`bg-slate-100/50 rounded-xl p-4 md:p-5 border border-slate-200 relative overflow-hidden ${isAlert ? 'bg-slate-100' : ''}`}>
+    <div className={`bg-slate-100/50 rounded-xl p-4 md:p-5 border border-slate-200 relative overflow-hidden ${isAlert ? 'bg-red-50 border-red-200' : ''}`}>
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">{title}</h3>
         {icon}
